@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>내전 팀 짜기</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .team-container {
+            display: flex;
+            justify-content: space-between; /* 양옆으로 대칭 배치 */
+            margin-top: 20px;
+        }
+        .team {
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            width: 45%; /* 양쪽으로 균등하게 배분 */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box; /* 패딩과 테두리를 포함한 너비 설정 */
+        }
+        .team h2 {
+            text-align: center;
+            font-size: 1.5em; /* 팀 이름 글자 크기 키우기 */
+            color: #007bff;
+        }
+        .team ul {
+            list-style: none;
+            padding: 0;
+        }
+        .team li {
+            background: #007bff;
+            color: white;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .team p {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .member-list {
+            margin-top: 20px;
+            column-count: 2; /* 명단을 2단으로 나누기 위한 설정 */
+            column-gap: 20px; /* 2단 사이의 거리 조절 */
+        }
+        .member-list div {
+            font-size: 1.3em; /* 글자 크기 키우기 */
+            margin-bottom: 10px; /* 항목 간격 조절 */
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            font-size: 1.5em; /* 버튼 글자 크기 키우기 */
+            padding: 10px 20px; /* 버튼 크기 조절 */
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>내전 팀 짜기</h1> <!-- 페이지 상단 제목 변경 -->
+    <div class="member-list" id="memberList">
+        <!-- 멤버 리스트가 여기에 동적으로 추가됩니다. -->
+    </div>
+    <button type="button" onclick="assignTeams()">뽑기</button> <!-- 버튼 텍스트 변경 -->
+    <div class="team-container">
+        <div class="team" id="team1">
+            <h2>Team 1</h2>
+            <ul></ul>
+            <p>내전1팀의 총 점수: <span></span></p> <!-- 텍스트 변경 -->
+        </div>
+        <div class="team" id="team2">
+            <h2>Team 2</h2>
+            <ul></ul>
+            <p>내전2팀의 총 점수: <span></span></p> <!-- 텍스트 변경 -->
+        </div>
+    </div>
+</body>
+<script>
+function fetchMembers() {
+    return fetch('/get-members')
+        .then(response => response.json())
+        .catch(error => console.error('Error:', error));
+}
+
+function renderMemberList(members) {
+    const memberList = document.getElementById('memberList');
+    memberList.innerHTML = '';
+    members.forEach((member, index) => {
+        let div = document.createElement('div');
+        div.innerHTML = `<input type="checkbox" id="member${index}" name="members" value="${member.name}" data-skill="${member.skill}">
+                         <label for="member${index}">${member.name} (Skill: ${member.skill})</label>`;
+        memberList.appendChild(div);
+    });
+}
+
+function getSelectedMembers() {
+    const checkboxes = document.querySelectorAll('input[name="members"]:checked');
+    let selectedMembers = [];
+    checkboxes.forEach((checkbox) => {
+        selectedMembers.push({
+            name: checkbox.value,
+            skill: parseFloat(checkbox.getAttribute('data-skill'))
+        });
+    });
+    return selectedMembers;
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function assignTeams() {
+    const selectedMembers = getSelectedMembers();
+
+    // 랜덤으로 팀을 나누기 전에 배열을 섞습니다.
+    shuffleArray(selectedMembers);
+
+    let team1 = [];
+    let team2 = [];
+    let team1Score = 0;
+    let team2Score = 0;
+    const allowedDifference = 3; // 점수 차이의 허용 범위 설정
+
+    // 팀 배치 및 점수 계산
+    for (let i = 0; i < selectedMembers.length; i++) {
+        if (i % 2 === 0) {
+            team1.push(selectedMembers[i]);
+            team1Score += selectedMembers[i].skill;
+        } else {
+            team2.push(selectedMembers[i]);
+            team2Score += selectedMembers[i].skill;
+        }
+    }
+
+    // 점수 차이를 계산하여 범위 내로 맞추기 위한 조정
+    while (Math.abs(team1Score - team2Score) > allowedDifference) {
+        let member1Index = Math.floor(Math.random() * team1.length);
+        let member2Index = Math.floor(Math.random() * team2.length);
+
+        let member1 = team1[member1Index];
+        let member2 = team2[member2Index];
+
+        team1[member1Index] = member2;
+        team2[member2Index] = member1;
+
+        team1Score = team1.reduce((sum, member) => sum + member.skill, 0);
+        team2Score = team2.reduce((sum, member) => sum + member.skill, 0);
+    }
+
+    displayResults(team1.map(member => member.name), team1Score, 'team1');
+    displayResults(team2.map(member => member.name), team2Score, 'team2');
+}
+
+function displayResults(team, score, teamId) {
+    let teamElement = document.getElementById(teamId);
+    let ul = teamElement.querySelector('ul');
+    ul.innerHTML = '';
+    team.forEach(member => {
+        let li = document.createElement('li');
+        li.textContent = member;
+        ul.appendChild(li);
+    });
+    teamElement.querySelector('span').textContent = score;
+}
+
+// 멤버 리스트를 초기화합니다.
+fetchMembers().then(members => {
+    renderMemberList(members);
+});
+</script>
+</html>
